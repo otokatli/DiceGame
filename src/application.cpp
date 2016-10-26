@@ -28,6 +28,7 @@ Features:
 
 //------------------------------------------------------------------------------
 #include "chai3d.h"
+#include "block_linked_list.h"
 //------------------------------------------------------------------------------
 using namespace chai3d;
 using namespace std;
@@ -130,6 +131,14 @@ char userName[256];
 bool mouseLeftClick = false;
 bool mouseRightClick = false;
 
+// buffer for storing data temporarily
+block_linked_list<cVector3d, (size_t) 1000> dataBuffer;
+
+list<double> dataList;
+
+// file to log data
+FILE* dataFile;
+
 //------------------------------------------------------------------------------
 // DECLARED FUNCTIONS
 //------------------------------------------------------------------------------
@@ -163,6 +172,12 @@ void createMenu(void);
 
 // process the event of the menu
 void processMenuEvents(int option);
+
+// callback to log data
+void logData(void);
+
+// callback to flush logged data
+void flushData(void);
 
 enum cMode
 {
@@ -214,7 +229,15 @@ int main(int argc, char* argv[])
 	cin.get(userName, 256);
 	cout << endl << endl;
 
-
+	//--------------------------------------------------------------------------
+	// OPEN FILE FOR DATA RECORDING
+	//--------------------------------------------------------------------------
+	dataFile = fopen(strcat(userName,".txt"), "wb");
+	if (dataFile == 0)
+	{
+		cerr << "Error opening file";
+		return -1;
+	}
 
     //--------------------------------------------------------------------------
     // OPENGL - WINDOW DISPLAY
@@ -452,8 +475,14 @@ int main(int argc, char* argv[])
 
     // create a thread which starts the main haptics rendering loop
     cThread* hapticsThread = new cThread();
-    
+
+	// create threads for data logging and writing
+	//cThread* dataThread = new cThread();
+	cThread* flushingThread = new cThread();
+
 	hapticsThread->start(updateHaptics, CTHREAD_PRIORITY_HAPTICS);
+	//dataThread->start(logData, CTHREAD_PRIORITY_HAPTICS);
+	flushingThread->start(flushData, CTHREAD_PRIORITY_GRAPHICS);
 
     // setup callback when application exits
     atexit(close);
@@ -478,12 +507,12 @@ void resizeWindow(int w, int h)
 
 void keySelect(unsigned char key, int x, int y)
 {
-    //// option ESC: exit
-    //if ((key == 27) || (key == 'x'))
-    //{
-    //    close();
-    //    exit(0);
-    //}
+    // option ESC: exit
+    if ((key == 27) || (key == 'x'))
+    {
+        close();
+        exit(0);
+    }
 
     //// option f: toggle fullscreen
     //if (key == 'f')
@@ -576,6 +605,11 @@ void close(void)
 
     // close haptic device
     hapticDevice->close();
+
+	Sleep(100);
+
+	// close data file
+	fclose(dataFile);
 }
 
 //------------------------------------------------------------------------------
@@ -733,6 +767,11 @@ void updateHaptics(void)
 
 		// send forces to haptic device
 		tool->applyToDevice();
+
+		cVector3d position;
+		hapticDevice->getPosition(position);
+		dataList.push_back(position.x());
+		dataBuffer.push_back(position);
 	}
 
 	// disable forces
@@ -803,6 +842,47 @@ void processMenuEvents(int option)
 	case SEPARATOR:
 		break;
 	}
+}
+
+//------------------------------------------------------------------------------
+
+void logData(void)
+{
+	////double time;
+	//cVector3d position;
+	///*cVector3d force;
+	//cVector3d velocity;*/
+
+	//while (simulationRunning)
+	//{
+	//	hapticDevice->getPosition(position);
+	//	/*hapticDevice->getLinearVelocity(velocity);
+	//	hapticDevice->getForce(force);*/
+
+	//	//dataNode.data = static_cast<cVector3d> position;
+	//	//dataBuffer.push_back(position.x());
+	//	dataList.push_back(position.x());
+	//}
+
+	//// update state
+	//simulationRunning = false;
+	//simulationFinished = true;
+}
+
+//------------------------------------------------------------------------------
+
+void flushData(void)
+{
+	while (simulationRunning)
+	{
+		dataBuffer.safe_flush(dataFile);
+	}
+
+	dataBuffer.safe_flush(dataFile);
+
+	// update state
+	simulationRunning = false;
+	simulationFinished = true;
 }
 
 //------------------------------------------------------------------------------

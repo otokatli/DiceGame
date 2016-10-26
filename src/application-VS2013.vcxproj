@@ -21,6 +21,9 @@
   <ItemGroup>
     <ClCompile Include="application.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="block_linked_list.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectName>application-GLUT</ProjectName>
     <ProjectGuid>{DF4A1F32-BA3E-4604-A9F5-721CAAA9EA71}</ProjectGuid>
