@@ -232,7 +232,7 @@ int main(int argc, char* argv[])
 	//--------------------------------------------------------------------------
 	// OPEN FILE FOR DATA RECORDING
 	//--------------------------------------------------------------------------
-	dataFile = fopen(strcat(userName,".txt"), "wb");
+	dataFile = fopen(strcat(userName,".hdata"), "wb");
 	if (dataFile == 0)
 	{
 		cerr << "Error opening file";
