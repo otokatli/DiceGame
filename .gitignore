@@ -270,3 +270,6 @@ __pycache__/
 
 # Cake - Uncomment if you are using it
 # tools/
+
+# data file for the experiments
+*.hdata

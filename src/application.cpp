@@ -94,6 +94,9 @@ cMultiMesh* actDice;
 // bounding sphere of the actual dice
 cMesh* boundingSphere;
 
+// virtual button
+cMesh* virtualButton;
+
 // selected object
 cGenericObject* selectedObject = NULL;
 
@@ -131,13 +134,30 @@ char userName[256];
 bool mouseLeftClick = false;
 bool mouseRightClick = false;
 
-// buffer for storing data temporarily
-block_linked_list<cVector3d, (size_t) 1000> dataBuffer;
+// virtual button state
+bool virtualButtonDown = false;
 
-list<double> dataList;
+// contact state of virtual button
+bool previousContactState = false;
+
+struct HapticData{
+	double    time;
+	cMatrix3d refDiceOrientation;
+	cVector3d actDicePos;
+	cMatrix3d actDiceOrientation;
+	cMatrix3d deviceOrientation;
+	cVector3d devicePos;
+	cVector3d deviceVel;
+};
+
+// buffer for storing data temporarily
+block_linked_list<HapticData, (size_t)1000> dataBuffer;
 
 // file to log data
 FILE* dataFile;
+
+// clock for measuring the timing of the experiment
+cPrecisionClock timer;
 
 //------------------------------------------------------------------------------
 // DECLARED FUNCTIONS
@@ -179,10 +199,19 @@ void logData(void);
 // callback to flush logged data
 void flushData(void);
 
+// Reset object position and orientation
+void resetWorld(void);
+
 enum cMode
 {
 	IDLE,
 	SELECTION
+};
+
+enum cVirtualMode
+{
+	vmIDLE,
+	vmCONTACT
 };
 
 enum menuItem
@@ -191,7 +220,8 @@ enum menuItem
 	EXIT_APP,
 	MIRROR_DISPLAY,
 	BOUNDING_SPHERE,
-	SEPARATOR
+	SEPARATOR,
+	RESET_WORLD
 };
 
 
@@ -226,13 +256,14 @@ int main(int argc, char* argv[])
     cout << endl << endl;
 
 	cout << "Name of the student/participant id:";
-	cin.get(userName, 256);
+	//cin.get(userName, 256);
 	cout << endl << endl;
 
 	//--------------------------------------------------------------------------
 	// OPEN FILE FOR DATA RECORDING
 	//--------------------------------------------------------------------------
-	dataFile = fopen(strcat(userName,".hdata"), "wb");
+	//dataFile = fopen(strcat(userName, ".hdata"), "wb");
+	dataFile = fopen("data.hdata", "wb");
 	if (dataFile == 0)
 	{
 		cerr << "Error opening file";
@@ -355,16 +386,6 @@ int main(int argc, char* argv[])
     // retrieve information about the current haptic device
     cHapticDeviceInfo info = hapticDevice->getSpecifications();
 
-    // display a reference frame if haptic device supports orientations
-    //if (info.m_sensedRotation == true)
-    //{
-    //    // display reference frame
-    //    tool->setShowFrame(true);
-
-    //    // set the size of the reference frame
-    //    tool->setFrameSize(0.05);
-    //}
-
     // if the device has a gripper, enable the gripper to simulate a user switch
     hapticDevice->setEnableGripperUserSwitch(true);
 
@@ -411,16 +432,23 @@ int main(int argc, char* argv[])
 	refDice = new cMultiMesh();
 	actDice = new cMultiMesh();
 	boundingSphere = new cMesh();
+	virtualButton = new cMesh();
+
+	// assign name to the virtualButton object
+	virtualButton->m_name = "virtualButton";
+	actDice->m_name = "actDice";
 
 	// add objects to the world
 	world->addChild(refDice);
 	world->addChild(actDice);
 	actDice->addChild(boundingSphere);
+	world->addChild(virtualButton);
 
 	// position object
 	actDice->setLocalPos(0.0, 1.0, 0.0);
 	refDice->setLocalPos(0.0, -1.0, 0.0);
 	boundingSphere->setLocalPos(0.0, 0.0, 0.0);
+	virtualButton->setLocalPos(-0.5, 0.0, -1.0);
 	
 	// Orientation of the reference dice
 	double angleX = rand() % 360;
@@ -429,23 +457,31 @@ int main(int argc, char* argv[])
 	refDice->rotateExtrinsicEulerAnglesDeg(angleX, angleY, angleZ, C_EULER_ORDER_XYZ);
 
 	// Load object files
-	actDice->loadFromFile("../../models/dice.obj");
-	refDice->loadFromFile("../../models/dice.obj");
+	/*actDice->loadFromFile("../../models/dice.obj");
+	refDice->loadFromFile("../../models/dice.obj");*/
+	actDice->loadFromFile("C:/Users/nm911876/Desktop/Projects/DiceGame/models/dice.obj");
+	refDice->loadFromFile("C:/Users/nm911876/Desktop/Projects/DiceGame/models/dice.obj");
 
 	// Radius of the bounding sphere for the actual dice (manipulated by the user)
 	radii = cSub(actDice->getBoundaryMax(), actDice->getBoundaryMin()).length() * scale * 0.5;
 
 	// create the bounding sphere
 	cCreateSphere(boundingSphere, radii);
+	// create the virtual button
+	cCreateSphere(virtualButton, radii / 2);
+
+	// adjust transparency levels
 	boundingSphere->setTransparencyLevel(0.25);
+	virtualButton->setTransparencyLevel(0.5);
 
 	// create material
 	cMaterial matMembrane;
-	matMembrane.setStiffness(0.3 * maxStiffness);
+	matMembrane.setStiffness(0.5 * maxStiffness);
 
 	// Assign material
 	actDice->setMaterial(matMembrane);
 	refDice->setMaterial(matMembrane);
+	virtualButton->setMaterial(matMembrane);
 
 	// scale object
 	actDice->scale(scale);
@@ -453,8 +489,10 @@ int main(int argc, char* argv[])
 
 	// create collision detector
 	actDice->createAABBCollisionDetector(toolRadius);
+	virtualButton->createAABBCollisionDetector(toolRadius);
 
-	boundingSphere->setEnabled(false);;
+	boundingSphere->setEnabled(false);
+
 
     //--------------------------------------------------------------------------
     // WIDGETS
@@ -467,7 +505,6 @@ int main(int argc, char* argv[])
     labelHapticRate = new cLabel(font);
     labelHapticRate->m_fontColor.setWhite();
     camera->m_frontLayer->addChild(labelHapticRate);
-
 
     //--------------------------------------------------------------------------
     // START SIMULATION
@@ -514,33 +551,6 @@ void keySelect(unsigned char key, int x, int y)
         exit(0);
     }
 
-    //// option f: toggle fullscreen
-    //if (key == 'f')
-    //{
-    //    if (fullscreen)
-    //    {
-    //        windowPosX = glutGet(GLUT_INIT_WINDOW_X);
-    //        windowPosY = glutGet(GLUT_INIT_WINDOW_Y);
-    //        windowW = glutGet(GLUT_INIT_WINDOW_WIDTH);
-    //        windowH = glutGet(GLUT_INIT_WINDOW_HEIGHT);
-    //        glutPositionWindow(windowPosX, windowPosY);
-    //        glutReshapeWindow(windowW, windowH);
-    //        fullscreen = false;
-    //    }
-    //    else
-    //    {
-    //        glutFullScreen();
-    //        fullscreen = true;
-    //    }
-    //}
-
-    //// option m: toggle vertical mirroring
-    //if (key == 'm')
-    //{
-    //    mirroredDisplay = !mirroredDisplay;
-    //    camera->setMirrorVertical(mirroredDisplay);
-    //}
-
 	if (key == 32)
 	{
 		// Orientation of the reference dice
@@ -549,11 +559,6 @@ void keySelect(unsigned char key, int x, int y)
 		double angleZ = rand() % 360;
 		refDice->rotateExtrinsicEulerAnglesDeg(angleX, angleY, angleZ, C_EULER_ORDER_XYZ);
 	}
-
-	/*if (key == 'b')
-	{
-		boundingSphere->setEnabled(!(boundingSphere->getEnabled()));
-	}*/
 }
 
 //------------------------------------------------------------------------------
@@ -609,6 +614,8 @@ void close(void)
 	Sleep(100);
 
 	// close data file
+	dataBuffer.safe_flush(dataFile);
+	Sleep(100);
 	fclose(dataFile);
 }
 
@@ -666,7 +673,10 @@ void updateGraphics(void)
 void updateHaptics(void)
 {
 	cMode state = IDLE;
+	cVirtualMode vState = vmIDLE;
 	cTransform tool_T_object;
+
+	HapticData tmpData;
 
 	// update state
 	simulationRunning = true;
@@ -686,6 +696,7 @@ void updateHaptics(void)
 		// compute interaction forces
 		tool->computeInteractionForces();
 
+		
 		//-------------------------------------------------------------
 		// Manipulation
 		//-------------------------------------------------------------
@@ -711,27 +722,25 @@ void updateHaptics(void)
 				// get contact event
 				cCollisionEvent* collisionEvent = tool->m_hapticPoint->getCollisionEvent(0);
 
-				if (selectedObject != NULL)
-					selectedObject->setShowBoundaryBox(false);
-
 				// get object from contact event
 				selectedObject = collisionEvent->m_object->getParent();
+				if (selectedObject-> m_name == "actDice")
+				{
+					// get transformation from object
+					cTransform world_T_object = selectedObject->getGlobalTransform();
 
-				// get transformation from object
-				cTransform world_T_object = selectedObject->getGlobalTransform();
+					// compute inverse transformation from contact point to object
+					cTransform tool_T_world = world_T_tool;
+					tool_T_world.invert();
 
-				// compute inverse transformation from contact point to object
-				cTransform tool_T_world = world_T_tool;
-				tool_T_world.invert();
+					// store current transformation tool
+					tool_T_object = tool_T_world * world_T_object;
 
-				// store current transformation tool
-				tool_T_object = tool_T_world * world_T_object;
-
-				// update state
-				state = SELECTION;
-
-				selectedObject->setShowBoundaryBox(true);
-
+					// update state
+					state = SELECTION;
+				}
+				else
+					selectedObject = NULL;
 			}
 		}
 		//
@@ -765,13 +774,51 @@ void updateHaptics(void)
 			state = IDLE;
 		}
 
+		//-------------------------------------------------------------
+		// Start/stop experiment
+		//-------------------------------------------------------------
+		cGenericObject* contactObject;
+		if (tool->m_hapticPoint->getNumCollisionEvents() > 0 && vState == vmIDLE)
+		{
+			if (tool->m_hapticPoint->getCollisionEvent(0)->m_object->m_name == "virtualButton" && vState == vmIDLE)
+			{
+				timer.stop();
+				vState = vmCONTACT;
+			}
+		}
+		else if (tool->m_hapticPoint->getNumCollisionEvents() == 0 && vState == vmCONTACT)
+		{
+			double angleX = rand() % 360;
+			double angleY = rand() % 360;
+			double angleZ = rand() % 360;
+
+			refDice->rotateExtrinsicEulerAnglesDeg(angleX, angleY, angleZ, C_EULER_ORDER_XYZ);
+
+			resetWorld();
+
+			// time measurement
+			cout << "Elapsed time: " << timer.getCurrentTimeSeconds() << endl;
+			timer.reset();
+			Sleep(10);
+			timer.start();
+
+			// set the virtual button state to idle
+			vState = vmIDLE;
+		}
+		
 		// send forces to haptic device
 		tool->applyToDevice();
 
-		cVector3d position;
-		hapticDevice->getPosition(position);
-		dataList.push_back(position.x());
-		dataBuffer.push_back(position);
+		// Log data temporaryly to tmpData struct
+		hapticDevice->getPosition(tmpData.devicePos);
+		hapticDevice->getLinearVelocity(tmpData.deviceVel);
+		hapticDevice->getRotation(tmpData.deviceOrientation);
+		tmpData.actDicePos = actDice->getLocalPos();
+		tmpData.actDiceOrientation = actDice->getLocalRot();
+		tmpData.refDiceOrientation = refDice->getLocalRot();
+		tmpData.time = timer.getCurrentTimeSeconds();
+
+		dataBuffer.push_back(tmpData);
 	}
 
 	// disable forces
@@ -782,7 +829,6 @@ void updateHaptics(void)
 	// update state
 	simulationRunning = false;
 	simulationFinished = true;
-
 }
 
 //------------------------------------------------------------------------------
@@ -798,6 +844,8 @@ void createMenu(void)
 	glutAddMenuEntry("---------------------", SEPARATOR);
 	glutAddMenuEntry("Full Screen", FULL_SCREEN);
 	glutAddMenuEntry("Mirror Display", MIRROR_DISPLAY);
+	glutAddMenuEntry("---------------------", SEPARATOR);
+	glutAddMenuEntry("Reset world", RESET_WORLD);
 	glutAddMenuEntry("---------------------", SEPARATOR);
 	glutAddMenuEntry("Exit", EXIT_APP);
 
@@ -841,32 +889,9 @@ void processMenuEvents(int option)
 		break;
 	case SEPARATOR:
 		break;
+	case RESET_WORLD:
+		resetWorld();
 	}
-}
-
-//------------------------------------------------------------------------------
-
-void logData(void)
-{
-	////double time;
-	//cVector3d position;
-	///*cVector3d force;
-	//cVector3d velocity;*/
-
-	//while (simulationRunning)
-	//{
-	//	hapticDevice->getPosition(position);
-	//	/*hapticDevice->getLinearVelocity(velocity);
-	//	hapticDevice->getForce(force);*/
-
-	//	//dataNode.data = static_cast<cVector3d> position;
-	//	//dataBuffer.push_back(position.x());
-	//	dataList.push_back(position.x());
-	//}
-
-	//// update state
-	//simulationRunning = false;
-	//simulationFinished = true;
 }
 
 //------------------------------------------------------------------------------
@@ -883,6 +908,14 @@ void flushData(void)
 	// update state
 	simulationRunning = false;
 	simulationFinished = true;
+}
+
+//------------------------------------------------------------------------------
+
+void resetWorld(void)
+{
+	actDice->setLocalPos(0.0, 1.0, 0.0);
+	actDice->setLocalRot(cMatrix3d(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0));
 }
 
 //------------------------------------------------------------------------------
