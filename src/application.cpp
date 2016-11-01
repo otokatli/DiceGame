@@ -338,7 +338,7 @@ int main(int argc, char* argv[])
 		cVector3d(1, 0, 0));   // azimuth direction
 
 	camera->setSphericalDeg(4.0,    // spherical coordinate radius
-		0,      // spherical coordinate azimuth angle
+		30,      // spherical coordinate azimuth angle
 		0);     // spherical coordinate polar angle
 
     // set the near and far clipping planes of the camera
@@ -448,7 +448,7 @@ int main(int argc, char* argv[])
 	actDice->setLocalPos(0.0, 1.0, 0.0);
 	refDice->setLocalPos(0.0, -1.0, 0.0);
 	boundingSphere->setLocalPos(0.0, 0.0, 0.0);
-	virtualButton->setLocalPos(-0.5, 0.0, -1.0);
+	virtualButton->setLocalPos(-0.5, -1.0, 1.0);
 	
 	// Orientation of the reference dice
 	double angleX = rand() % 360;
@@ -472,16 +472,19 @@ int main(int argc, char* argv[])
 
 	// adjust transparency levels
 	boundingSphere->setTransparencyLevel(0.25);
-	virtualButton->setTransparencyLevel(0.5);
+	//virtualButton->setTransparencyLevel(0.75);
 
 	// create material
 	cMaterial matMembrane;
+	cMaterial matButton;
 	matMembrane.setStiffness(0.5 * maxStiffness);
+	matButton.setStiffness(0.5 * maxStiffness);
+	matButton.setBlueCadet();
 
 	// Assign material
 	actDice->setMaterial(matMembrane);
 	refDice->setMaterial(matMembrane);
-	virtualButton->setMaterial(matMembrane);
+	virtualButton->setMaterial(matButton);
 
 	// scale object
 	actDice->scale(scale);
