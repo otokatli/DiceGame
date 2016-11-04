@@ -10,8 +10,12 @@
     <ClCompile Include="application.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ConfFile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="block_linked_list.h" />
+    <ClInclude Include="ConfFile.h" />
   </ItemGroup>
 </Project>

@@ -20,9 +20,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="application.cpp" />
+    <ClCompile Include="ConfFile.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="block_linked_list.h" />
+    <ClInclude Include="ConfFile.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectName>application-GLUT</ProjectName>

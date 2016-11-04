@@ -20,7 +20,6 @@ Features:
 - Space key (key = 32) is used to load a new reference dice orientation
 
 \todo
-- Data logging
 - Multi-finger support
 
 */
@@ -29,6 +28,7 @@ Features:
 //------------------------------------------------------------------------------
 #include "chai3d.h"
 #include "block_linked_list.h"
+#include "ConfFile.h"
 //------------------------------------------------------------------------------
 using namespace chai3d;
 using namespace std;
@@ -159,6 +159,12 @@ FILE* dataFile;
 // clock for measuring the timing of the experiment
 cPrecisionClock timer;
 
+// index of the current subexperiment
+int indSubExp = 0;
+
+// configuration file for the experiment
+ConfFile config;
+
 //------------------------------------------------------------------------------
 // DECLARED FUNCTIONS
 //------------------------------------------------------------------------------
@@ -255,18 +261,24 @@ int main(int argc, char* argv[])
     cout << "[x] - Exit application" << endl;
     cout << endl << endl;
 
-	cout << "Name of the student/participant id:";
+	//cout << "Name of the student/participant id:";
 	//cin.get(userName, 256);
-	cout << endl << endl;
+	//cout << endl << endl;
+
+	//--------------------------------------------------------------------------
+	// OPEN CONFIGURATION FILE
+	//--------------------------------------------------------------------------
+	config.openConfFile("C:/Users/nm911876/Desktop/Projects/DiceGame/bin/win-x64/experiment.conf");
+	cout << config.m_numSubExp << " configuration(s) is/are loaded." << endl;
+	//config.printConfigurations();
 
 	//--------------------------------------------------------------------------
 	// OPEN FILE FOR DATA RECORDING
 	//--------------------------------------------------------------------------
-	//dataFile = fopen(strcat(userName, ".hdata"), "wb");
 	dataFile = fopen("data.hdata", "wb");
 	if (dataFile == 0)
 	{
-		cerr << "Error opening file";
+		cerr << "Error: Output data file could not be opened!";
 		return -1;
 	}
 
@@ -451,10 +463,10 @@ int main(int argc, char* argv[])
 	virtualButton->setLocalPos(-0.5, -1.0, 1.0);
 	
 	// Orientation of the reference dice
-	double angleX = rand() % 360;
+	/*double angleX = rand() % 360;
 	double angleY = rand() % 360;
 	double angleZ = rand() % 360;
-	refDice->rotateExtrinsicEulerAnglesDeg(angleX, angleY, angleZ, C_EULER_ORDER_XYZ);
+	refDice->rotateExtrinsicEulerAnglesDeg(angleX, angleY, angleZ, C_EULER_ORDER_XYZ);*/
 
 	// Load object files
 	/*actDice->loadFromFile("../../models/dice.obj");
@@ -780,7 +792,7 @@ void updateHaptics(void)
 		//-------------------------------------------------------------
 		// Start/stop experiment
 		//-------------------------------------------------------------
-		cGenericObject* contactObject;
+		//cGenericObject* contactObject;
 		if (tool->m_hapticPoint->getNumCollisionEvents() > 0 && vState == vmIDLE)
 		{
 			if (tool->m_hapticPoint->getCollisionEvent(0)->m_object->m_name == "virtualButton" && vState == vmIDLE)
@@ -791,22 +803,21 @@ void updateHaptics(void)
 		}
 		else if (tool->m_hapticPoint->getNumCollisionEvents() == 0 && vState == vmCONTACT)
 		{
-			double angleX = rand() % 360;
-			double angleY = rand() % 360;
-			double angleZ = rand() % 360;
+			if (indSubExp < config.m_numSubExp)
+			{
+				refDice->rotateAboutLocalAxisRad(cVector3d(config.m_rotations[indSubExp][0], config.m_rotations[indSubExp][1], config.m_rotations[indSubExp][2]), config.m_rotations[indSubExp][3]);
+				resetWorld();
 
-			refDice->rotateExtrinsicEulerAnglesDeg(angleX, angleY, angleZ, C_EULER_ORDER_XYZ);
+				// time measurement
+				cout << "Elapsed time: " << timer.getCurrentTimeSeconds() << endl;
+				timer.reset();
+				Sleep(10);
+				timer.start();
 
-			resetWorld();
-
-			// time measurement
-			cout << "Elapsed time: " << timer.getCurrentTimeSeconds() << endl;
-			timer.reset();
-			Sleep(10);
-			timer.start();
-
-			// set the virtual button state to idle
-			vState = vmIDLE;
+				// set the virtual button state to idle
+				vState = vmIDLE;
+				++indSubExp;
+			}
 		}
 		
 		// send forces to haptic device
@@ -825,9 +836,7 @@ void updateHaptics(void)
 	}
 
 	// disable forces
-	hapticDevice->setForceAndTorqueAndGripperForce(cVector3d(0.0, 0.0, 0.0),
-		cVector3d(0.0, 0.0, 0.0),
-		0.0);
+	hapticDevice->setForceAndTorqueAndGripperForce(cVector3d(0.0, 0.0, 0.0), cVector3d(0.0, 0.0, 0.0), 0.0);
 
 	// update state
 	simulationRunning = false;
