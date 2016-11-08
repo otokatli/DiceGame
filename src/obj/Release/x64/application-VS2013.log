@@ -1,28 +1,29 @@
-﻿Build started 31/10/2016 12:09:40.
+﻿Build started 06/11/2016 17:14:27.
      1>Project "C:\Users\nm911876\Desktop\Projects\DiceGame\src\application-VS2013.vcxproj" on node 2 (Build target(s)).
      1>ClCompile:
-         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\CL.exe /c /I"C:\Chai3D\chai3d-3.1.1/src" /I"C:\Chai3D\chai3d-3.1.1/external/Eigen" /I"C:\Chai3D\chai3d-3.1.1/external/glew/include" /I"C:\Chai3D\chai3d-3.1.1/extras/freeglut/include" /nologo /W3 /WX- /Ox /Ob2 /Oi /Ot /Oy /GT /D WIN64 /D NDEBUG /D _CONSOLE /D _MSVC /D _CRT_SECURE_NO_WARNINGS /D _VC80_UPGRADE=0x0710 /D _MBCS /GF /Gm- /EHsc /MD /GS- /Gy- /fp:precise /Zc:wchar_t /Zc:forScope /GR /Fo"obj/Release/x64\\" /Fd"obj/Release/x64\vc120.pdb" /Gd /TP /wd4244 /wd4305 /errorReport:prompt application.cpp
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\CL.exe /c /I"C:\Chai3D\chai3d-3.1.1/modules/ODE/src" /I"C:\Chai3D\chai3d-3.1.1/modules/ODE/external/ODE/include" /I"C:\Chai3D\chai3d-3.1.1/src" /I"C:\Chai3D\chai3d-3.1.1/external/Eigen" /I"C:\Chai3D\chai3d-3.1.1/external/glew/include" /I"C:\Chai3D\chai3d-3.1.1/extras/freeglut/include" /nologo /W3 /WX- /Ox /Ob2 /Oi /Ot /Oy /GT /D WIN64 /D NDEBUG /D _CONSOLE /D _MSVC /D _CRT_SECURE_NO_WARNINGS /D _VC80_UPGRADE=0x0710 /D _MBCS /GF /Gm- /EHsc /MD /GS- /Gy- /fp:precise /Zc:wchar_t /Zc:forScope /GR /Fo"obj/Release/x64\\" /Fd"obj/Release/x64\vc120.pdb" /Gd /TP /wd4244 /wd4305 /errorReport:prompt application.cpp
          application.cpp
      1>c:\users\nm911876\desktop\projects\dicegame\src\block_linked_list.h(109): warning C4267: 'return' : conversion from 'size_t' to 'int', possible loss of data
-                 c:\users\nm911876\desktop\projects\dicegame\src\block_linked_list.h(94) : while compiling class template member function 'int block_linked_list<double,0x03e8>::push_back(const T &)'
+                 c:\users\nm911876\desktop\projects\dicegame\src\block_linked_list.h(94) : while compiling class template member function 'int block_linked_list<HapticData,0x03e8>::push_back(const T &)'
                  with
                  [
-                     T=double
+                     T=HapticData
                  ]
-                 application.cpp(763) : see reference to function template instantiation 'int block_linked_list<double,0x03e8>::push_back(const T &)' being compiled
+                 application.cpp(942) : see reference to function template instantiation 'int block_linked_list<HapticData,0x03e8>::push_back(const T &)' being compiled
                  with
                  [
-                     T=double
+                     T=HapticData
                  ]
-                 application.cpp(139) : see reference to class template instantiation 'block_linked_list<double,0x03e8>' being compiled
+                 application.cpp(156) : see reference to class template instantiation 'block_linked_list<HapticData,0x03e8>' being compiled
      1>c:\users\nm911876\desktop\projects\dicegame\src\block_linked_list.h(165): warning C4267: 'initializing' : conversion from 'size_t' to 'int', possible loss of data
-                 c:\users\nm911876\desktop\projects\dicegame\src\block_linked_list.h(152) : while compiling class template member function 'int block_linked_list<double,0x03e8>::safe_flush(FILE *,int)'
-                 application.cpp(867) : see reference to function template instantiation 'int block_linked_list<double,0x03e8>::safe_flush(FILE *,int)' being compiled
+                 c:\users\nm911876\desktop\projects\dicegame\src\block_linked_list.h(152) : while compiling class template member function 'int block_linked_list<HapticData,0x03e8>::safe_flush(FILE *,int)'
+                 application.cpp(739) : see reference to function template instantiation 'int block_linked_list<HapticData,0x03e8>::safe_flush(FILE *,int)' being compiled
        Link:
-         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\link.exe /ERRORREPORT:PROMPT /OUT:"../bin/win-x64/application-GLUT.exe" /INCREMENTAL:NO /NOLOGO /LIBPATH:"C:\Chai3D\chai3d-3.1.1/lib/Release/x64" /LIBPATH:"C:\Chai3D\chai3d-3.1.1/extras/freeglut/lib/Release/x64" freeglut.lib chai3d.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:"C:\Users\nm911876\Desktop\Projects\DiceGame\bin\win-x64\application-GLUT.pdb" /SUBSYSTEM:CONSOLE /OPT:REF /OPT:ICF /TLBID:1 /DYNAMICBASE:NO /IMPLIB:"../bin/win-x64/application-GLUT.lib" /MACHINE:X64 obj/Release/x64\application.obj
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\link.exe /ERRORREPORT:PROMPT /OUT:"../bin/win-x64/application-GLUT.exe" /INCREMENTAL:NO /NOLOGO /LIBPATH:"C:\Chai3D\chai3d-3.1.1/modules/ODE/lib/Release/x64" /LIBPATH:"C:\Chai3D\chai3d-3.1.1/lib/Release/x64" /LIBPATH:"C:\Chai3D\chai3d-3.1.1/extras/freeglut/lib/Release/x64" freeglut.lib chai3d.lib "chai3d-ODE.lib" kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:"C:\Users\nm911876\Desktop\Projects\DiceGame\bin\win-x64\application-GLUT.pdb" /SUBSYSTEM:CONSOLE /OPT:REF /OPT:ICF /TLBID:1 /DYNAMICBASE:NO /IMPLIB:"../bin/win-x64/application-GLUT.lib" /MACHINE:X64 obj/Release/x64\application.obj
+         obj/Release/x64\ConfFile.obj
          application-VS2013.vcxproj -> C:\Users\nm911876\Desktop\Projects\DiceGame\src\../bin/win-x64/application-GLUT.exe
      1>Done Building Project "C:\Users\nm911876\Desktop\Projects\DiceGame\src\application-VS2013.vcxproj" (Build target(s)).
 
 Build succeeded.
 
-Time Elapsed 00:00:02.34
+Time Elapsed 00:00:02.92

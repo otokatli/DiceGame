@@ -33,6 +33,8 @@ Features:
 using namespace chai3d;
 using namespace std;
 //------------------------------------------------------------------------------
+#include "CODE.h"
+//------------------------------------------------------------------------------
 #ifndef MACOSX
 #include "GL/glut.h"
 #else
@@ -159,11 +161,35 @@ FILE* dataFile;
 // clock for measuring the timing of the experiment
 cPrecisionClock timer;
 
+// simulation clock
+cPrecisionClock simClock;
+
 // index of the current subexperiment
 int indSubExp = 0;
 
 // configuration file for the experiment
 ConfFile config;
+
+// torque gain
+double torqueGain = 2.0;
+
+//---------------------------------------------------------------------------
+// ODE MODULE VARIABLES
+//---------------------------------------------------------------------------
+
+// ODE world
+cODEWorld* ODEWorld;
+
+// ODE objects
+cODEGenericBody* ODEactDice;
+
+// ODE objects
+cODEGenericBody* ODEGPlane0;
+cODEGenericBody* ODEGPlane1;
+cODEGenericBody* ODEGPlane2;
+cODEGenericBody* ODEGPlane3;
+cODEGenericBody* ODEGPlane4;
+cODEGenericBody* ODEGPlane5;
 
 //------------------------------------------------------------------------------
 // DECLARED FUNCTIONS
@@ -437,45 +463,43 @@ int main(int argc, char* argv[])
 	double maxLinearDamping = info.m_maxLinearDamping;
 	double maxStiffness = info.m_maxLinearStiffness / workspaceScaleFactor;
 
+
+    //--------------------------------------------------------------------------
+    // WIDGETS
+    //--------------------------------------------------------------------------
+
+    // create a font
+    cFont *font = NEW_CFONTCALIBRI20();
+    
+    // create a label to display the haptic rate of the simulation
+    labelHapticRate = new cLabel(font);
+    labelHapticRate->m_fontColor.setWhite();
+    camera->m_frontLayer->addChild(labelHapticRate);
+
 	//--------------------------------------------------------------------------
-	// OBJECTS
+	// CREATE ODE WORLD AND OBJECTS
 	//--------------------------------------------------------------------------
-	// create virtual objects
 	refDice = new cMultiMesh();
-	actDice = new cMultiMesh();
 	boundingSphere = new cMesh();
 	virtualButton = new cMesh();
 
 	// assign name to the virtualButton object
 	virtualButton->m_name = "virtualButton";
-	actDice->m_name = "actDice";
 
 	// add objects to the world
 	world->addChild(refDice);
-	world->addChild(actDice);
-	actDice->addChild(boundingSphere);
 	world->addChild(virtualButton);
 
 	// position object
-	actDice->setLocalPos(0.0, 1.0, 0.0);
 	refDice->setLocalPos(0.0, -1.0, 0.0);
 	boundingSphere->setLocalPos(0.0, 0.0, 0.0);
 	virtualButton->setLocalPos(-0.5, -1.0, 1.0);
-	
-	// Orientation of the reference dice
-	/*double angleX = rand() % 360;
-	double angleY = rand() % 360;
-	double angleZ = rand() % 360;
-	refDice->rotateExtrinsicEulerAnglesDeg(angleX, angleY, angleZ, C_EULER_ORDER_XYZ);*/
 
 	// Load object files
-	/*actDice->loadFromFile("../../models/dice.obj");
-	refDice->loadFromFile("../../models/dice.obj");*/
-	actDice->loadFromFile("C:/Users/nm911876/Desktop/Projects/DiceGame/models/dice.obj");
 	refDice->loadFromFile("C:/Users/nm911876/Desktop/Projects/DiceGame/models/dice.obj");
 
 	// Radius of the bounding sphere for the actual dice (manipulated by the user)
-	radii = cSub(actDice->getBoundaryMax(), actDice->getBoundaryMin()).length() * scale * 0.5;
+	radii = cSub(refDice->getBoundaryMax(), refDice->getBoundaryMin()).length() * scale * 0.5;
 
 	// create the bounding sphere
 	cCreateSphere(boundingSphere, radii);
@@ -494,32 +518,119 @@ int main(int argc, char* argv[])
 	matButton.setBlueCadet();
 
 	// Assign material
-	actDice->setMaterial(matMembrane);
 	refDice->setMaterial(matMembrane);
 	virtualButton->setMaterial(matButton);
 
 	// scale object
-	actDice->scale(scale);
 	refDice->scale(scale);
 
 	// create collision detector
-	actDice->createAABBCollisionDetector(toolRadius);
 	virtualButton->createAABBCollisionDetector(toolRadius);
 
 	boundingSphere->setEnabled(false);
 
+	//--------------------------------------------------------------------------
+	// CREATE ODE WORLD AND OBJECTS
+	//--------------------------------------------------------------------------
+	//////////////////////////////////////////////////////////////////////////
+	// ODE WORLD
+	//////////////////////////////////////////////////////////////////////////
+	
+	// create an ODE world to simulate dynamic bodies
+	ODEWorld = new cODEWorld(world);
 
-    //--------------------------------------------------------------------------
-    // WIDGETS
-    //--------------------------------------------------------------------------
+	// add ODE world as a node inside world
+	world->addChild(ODEWorld);
 
-    // create a font
-    cFont *font = NEW_CFONTCALIBRI20();
-    
-    // create a label to display the haptic rate of the simulation
-    labelHapticRate = new cLabel(font);
-    labelHapticRate->m_fontColor.setWhite();
-    camera->m_frontLayer->addChild(labelHapticRate);
+	// set some gravity
+	//ODEWorld->setGravity(cVector3d(0.00, 0.00, -9.81));
+	ODEWorld->setGravity(cVector3d(0.00, 0.00, 0.0));
+
+	// define damping properties
+	ODEWorld->setAngularDamping(0.00002);
+	ODEWorld->setLinearDamping(0.00002);
+
+	//////////////////////////////////////////////////////////////////////////
+	// DICE OBJECT
+	//////////////////////////////////////////////////////////////////////////
+	ODEactDice = new cODEGenericBody(ODEWorld);
+
+	cMultiMesh* actDice = new cMultiMesh();
+	actDice->setLocalPos(0.0, 1.0, 0.0);
+	actDice->loadFromFile("C:/Users/nm911876/Desktop/Projects/DiceGame/models/dice.obj");
+	// Radius of the bounding sphere for the actual dice (manipulated by the user)
+	radii = cSub(actDice->getBoundaryMax(), actDice->getBoundaryMin()).length() * scale * 0.5;
+
+	// assign name to the virtualButton object
+	actDice->m_name = "actDice";
+
+	// Assign material
+	actDice->setMaterial(matMembrane);
+
+	// create collision detector
+	actDice->createAABBCollisionDetector(toolRadius);
+
+	// add mesh to ODE object
+	ODEactDice->setImageModel(actDice);
+
+	// create a dynamic model of the ODE object. Here we decide to use a box just like
+	// the object mesh we just defined
+	ODEactDice->createDynamicBox(radii, radii, radii);
+
+	// define some mass properties for each cube
+	ODEactDice->setMass(0.05);
+
+	// set position of the dice
+	ODEactDice->setLocalPos(0.0, 1.0, 0.0);
+
+	//////////////////////////////////////////////////////////////////////////
+	// 6 ODE INVISIBLE WALLS
+	//////////////////////////////////////////////////////////////////////////
+
+	// we create 6 static walls to contains the 3 cubes within a limited workspace
+	ODEGPlane0 = new cODEGenericBody(ODEWorld);
+	ODEGPlane1 = new cODEGenericBody(ODEWorld);
+	ODEGPlane2 = new cODEGenericBody(ODEWorld);
+	ODEGPlane3 = new cODEGenericBody(ODEWorld);
+	ODEGPlane4 = new cODEGenericBody(ODEWorld);
+	ODEGPlane5 = new cODEGenericBody(ODEWorld);
+
+	double width = 1.0;
+	ODEGPlane0->createStaticPlane(cVector3d(0.0, 0.0, 2.0 *width), cVector3d(0.0, 0.0, -1.0));
+	ODEGPlane1->createStaticPlane(cVector3d(0.0, 0.0, -width), cVector3d(0.0, 0.0, 1.0));
+	ODEGPlane2->createStaticPlane(cVector3d(0.0, width, 0.0), cVector3d(0.0, -1.0, 0.0));
+	ODEGPlane3->createStaticPlane(cVector3d(0.0, -width, 0.0), cVector3d(0.0, 1.0, 0.0));
+	ODEGPlane4->createStaticPlane(cVector3d(width, 0.0, 0.0), cVector3d(-1.0, 0.0, 0.0));
+	ODEGPlane5->createStaticPlane(cVector3d(-0.8 * width, 0.0, 0.0), cVector3d(1.0, 0.0, 0.0));
+
+
+	//////////////////////////////////////////////////////////////////////////
+	// GROUND
+	//////////////////////////////////////////////////////////////////////////
+
+	// create a mesh that represents the ground
+	cMesh* ground = new cMesh();
+	ODEWorld->addChild(ground);
+
+	// create a plane
+	double groundSize = 3.0;
+	cCreatePlane(ground, groundSize, groundSize);
+
+	// position ground in world where the invisible ODE plane is located (ODEGPlane1)
+	ground->setLocalPos(0.0, 0.0, -1.0);
+
+	// define some material properties and apply to mesh
+	cMaterial matGround;
+	matGround.setStiffness(0.3 * maxStiffness);
+	matGround.setDynamicFriction(0.2);
+	matGround.setStaticFriction(0.0);
+	matGround.setWhite();
+	matGround.m_emission.setGrayLevel(0.3);
+	ground->setMaterial(matGround);
+	ground->setTransparencyLevel(1.0);
+
+	// setup collision detector
+	ground->createAABBCollisionDetector(toolRadius);
 
     //--------------------------------------------------------------------------
     // START SIMULATION
@@ -687,152 +798,65 @@ void updateGraphics(void)
 
 void updateHaptics(void)
 {
-	cMode state = IDLE;
-	cVirtualMode vState = vmIDLE;
-	cTransform tool_T_object;
-
-	HapticData tmpData;
-
 	// update state
 	simulationRunning = true;
 	simulationFinished = false;
 
 	while (simulationRunning)
 	{
-		// update frequency counter
-		frequencyCounter.signal(1);
-
 		// compute global reference frames for each object
 		world->computeGlobalPositions(true);
 
-		// update position and orientation of tool
+		// update positions
 		tool->updateFromDevice();
 
 		// compute interaction forces
 		tool->computeInteractionForces();
 
-		
-		//-------------------------------------------------------------
-		// Manipulation
-		//-------------------------------------------------------------
-
-		// compute transformation from world to tool (haptic device)
-		cTransform world_T_tool = tool->getDeviceGlobalTransform();
-
-		// get status of user switch
-		bool robotButton1 = tool->getUserSwitch(0);
-
-		//
-		// STATE 1:
-		// Idle mode - user presses the user switch
-		//
-		if ((state == IDLE) && (robotButton1 == true))
-		{
-			// Increas the number of clicks counter
-			//m_numClicks++;
-
-			// check if at least one contact has occurred
-			if (tool->m_hapticPoint->getNumCollisionEvents() > 0)
-			{
-				// get contact event
-				cCollisionEvent* collisionEvent = tool->m_hapticPoint->getCollisionEvent(0);
-
-				// get object from contact event
-				selectedObject = collisionEvent->m_object->getParent();
-				if (selectedObject-> m_name == "actDice")
-				{
-					// get transformation from object
-					cTransform world_T_object = selectedObject->getGlobalTransform();
-
-					// compute inverse transformation from contact point to object
-					cTransform tool_T_world = world_T_tool;
-					tool_T_world.invert();
-
-					// store current transformation tool
-					tool_T_object = tool_T_world * world_T_object;
-
-					// update state
-					state = SELECTION;
-				}
-				else
-					selectedObject = NULL;
-			}
-		}
-		//
-		// STATE 2:
-		// Selection mode - operator maintains user switch enabled and moves object
-		//
-		else if ((state == SELECTION) && (robotButton1 == true))
-		{
-			// compute new transformation of object in global coordinates
-			cTransform world_T_object = world_T_tool * tool_T_object;
-
-			// compute new transformation of object in local coordinates
-			cTransform parent_T_world = selectedObject->getParent()->getLocalTransform();
-			parent_T_world.invert();
-			cTransform parent_T_object = parent_T_world * world_T_object;
-
-			// assign new local transformation to object
-			selectedObject->setLocalTransform(parent_T_object);
-
-			// set zero forces when manipulating objects
-			tool->setDeviceGlobalForce(0.0, 0.0, 0.0);
-
-			tool->initialize();
-		}
-		//
-		// STATE 3:
-		// Finalize Selection mode - operator releases user switch.
-		//
-		else
-		{
-			state = IDLE;
-		}
-
-		//-------------------------------------------------------------
-		// Start/stop experiment
-		//-------------------------------------------------------------
-		//cGenericObject* contactObject;
-		if (tool->m_hapticPoint->getNumCollisionEvents() > 0 && vState == vmIDLE)
-		{
-			if (tool->m_hapticPoint->getCollisionEvent(0)->m_object->m_name == "virtualButton" && vState == vmIDLE)
-			{
-				timer.stop();
-				vState = vmCONTACT;
-			}
-		}
-		else if (tool->m_hapticPoint->getNumCollisionEvents() == 0 && vState == vmCONTACT)
-		{
-			if (indSubExp < config.m_numSubExp)
-			{
-				refDice->rotateAboutLocalAxisRad(cVector3d(config.m_rotations[indSubExp][0], config.m_rotations[indSubExp][1], config.m_rotations[indSubExp][2]), config.m_rotations[indSubExp][3]);
-				resetWorld();
-
-				// time measurement
-				cout << "Elapsed time: " << timer.getCurrentTimeSeconds() << endl;
-				timer.reset();
-				Sleep(10);
-				timer.start();
-
-				// set the virtual button state to idle
-				vState = vmIDLE;
-				++indSubExp;
-			}
-		}
-		
-		// send forces to haptic device
+		// apply forces to haptic device
+		tool->setDeviceGlobalTorque(torqueGain * tool->getDeviceGlobalTorque());
 		tool->applyToDevice();
 
-		// Log data temporaryly to tmpData struct
-		hapticDevice->getPosition(tmpData.devicePos);
-		hapticDevice->getLinearVelocity(tmpData.deviceVel);
-		hapticDevice->getRotation(tmpData.deviceOrientation);
-		tmpData.actDicePos = actDice->getLocalPos();
-		tmpData.actDiceOrientation = actDice->getLocalRot();
-		tmpData.refDiceOrientation = refDice->getLocalRot();
-		tmpData.time = timer.getCurrentTimeSeconds();
+		// apply forces to ODE object
+		int numInteractionPoints = tool->getNumHapticPoints();
+		for (int j = 0; j < numInteractionPoints; ++j)
+		{
+			// get pointer to next interaction point of tool
+			cHapticPoint* interactionPoint = tool->getHapticPoint(j);
 
-		dataBuffer.push_back(tmpData);
+			// check all contact points
+			int numContacts = interactionPoint->getNumCollisionEvents();
+			for (int k = 0; k < numContacts; k++)
+			{
+				cCollisionEvent* collisionEvent = interactionPoint->getCollisionEvent(k);
+
+				// given the mesh object we may be touching, we search for its owner which
+				// could be the mesh itself or a multi-mesh object. Once the owner found, we
+				// look for the parent that will point to the ODE object itself.
+				cGenericObject* object = collisionEvent->m_object->getOwner()->getOwner();
+
+				// cast to ODE object
+				cODEGenericBody* ODEobject = dynamic_cast<cODEGenericBody*>(object);
+
+				// if ODE object, we apply interaction forces
+				if (ODEobject != NULL)
+				{
+					ODEobject->addExternalForceAtPoint(-0.3 * interactionPoint->getLastComputedForce(),
+						collisionEvent->m_globalPos);
+				}
+			}
+		}
+
+		// retrieve simulation time and compute next interval
+		double time = simClock.getCurrentTimeSeconds();
+		double nextSimInterval = cClamp(time, 0.0001, 0.001);
+
+		// reset clock
+		simClock.reset();
+		simClock.start();
+
+		// update simulation
+		ODEWorld->updateDynamics(nextSimInterval);
 	}
 
 	// disable forces
@@ -926,8 +950,15 @@ void flushData(void)
 
 void resetWorld(void)
 {
-	actDice->setLocalPos(0.0, 1.0, 0.0);
-	actDice->setLocalRot(cMatrix3d(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0));
+	camera->setSphericalDeg(4.0,    // spherical coordinate radius
+		30,      // spherical coordinate azimuth angle
+		0);     // spherical coordinate polar angle
+
+	// line up tool with camera
+	tool->setLocalRot(camera->getLocalRot());
+
+	ODEactDice->setLocalPos(0.0, 1.0, 0.0);
+	ODEactDice->setLocalRot(cMatrix3d(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0));
 }
 
 //------------------------------------------------------------------------------

@@ -12,6 +12,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CHAI3D", "..\..\..\..\..\..
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "freeglut", "..\..\..\..\..\..\Chai3D\chai3d-3.1.1\extras\freeglut\freeglut-VS2013.vcxproj", "{71AF75A0-52B6-4C1B-8E56-CB31C6741A18}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CHAI3D-ODE", "..\..\..\..\..\..\Chai3D\chai3d-3.1.1\modules\ODE\CHAI3D-ODE-VS2013.vcxproj", "{36A3C28A-B798-4238-B1ED-A7A9B6E8817E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Mixed Platforms = Debug|Mixed Platforms
@@ -58,6 +60,18 @@ Global
 		{71AF75A0-52B6-4C1B-8E56-CB31C6741A18}.Release|Win32.Build.0 = Release|Win32
 		{71AF75A0-52B6-4C1B-8E56-CB31C6741A18}.Release|x64.ActiveCfg = Release|x64
 		{71AF75A0-52B6-4C1B-8E56-CB31C6741A18}.Release|x64.Build.0 = Release|x64
+		{36A3C28A-B798-4238-B1ED-A7A9B6E8817E}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{36A3C28A-B798-4238-B1ED-A7A9B6E8817E}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{36A3C28A-B798-4238-B1ED-A7A9B6E8817E}.Debug|Win32.ActiveCfg = Debug|Win32
+		{36A3C28A-B798-4238-B1ED-A7A9B6E8817E}.Debug|Win32.Build.0 = Debug|Win32
+		{36A3C28A-B798-4238-B1ED-A7A9B6E8817E}.Debug|x64.ActiveCfg = Debug|x64
+		{36A3C28A-B798-4238-B1ED-A7A9B6E8817E}.Debug|x64.Build.0 = Debug|x64
+		{36A3C28A-B798-4238-B1ED-A7A9B6E8817E}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{36A3C28A-B798-4238-B1ED-A7A9B6E8817E}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{36A3C28A-B798-4238-B1ED-A7A9B6E8817E}.Release|Win32.ActiveCfg = Release|Win32
+		{36A3C28A-B798-4238-B1ED-A7A9B6E8817E}.Release|Win32.Build.0 = Release|Win32
+		{36A3C28A-B798-4238-B1ED-A7A9B6E8817E}.Release|x64.ActiveCfg = Release|x64
+		{36A3C28A-B798-4238-B1ED-A7A9B6E8817E}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
